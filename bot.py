@@ -72,11 +72,22 @@ def format_result(
     return "\n".join(lines)
 
 
-DND_DICE = ["d4", "d6", "d8", "d10", "d12", "d20", "d100"]
+DND_DICE = [
+    ("🔺 d4",  "d4"),
+    ("🎲 d6",  "d6"),
+    ("💎 d8",  "d8"),
+    ("🔟 d10", "d10"),
+    ("🔮 d12", "d12"),
+    ("⭐ d20", "d20"),
+    ("💯 d100","d100"),
+]
 
 
 def dice_keyboard() -> InlineKeyboardMarkup:
-    buttons = [InlineKeyboardButton(d, callback_data=f"roll:1{d}") for d in DND_DICE]
+    buttons = [
+        InlineKeyboardButton(label, callback_data=f"roll:1{die}")
+        for label, die in DND_DICE
+    ]
     # Two rows: 4 + 3
     return InlineKeyboardMarkup([buttons[:4], buttons[4:]])
 
