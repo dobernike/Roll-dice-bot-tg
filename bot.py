@@ -2,8 +2,8 @@ import os
 import re
 import random
 import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -72,13 +72,35 @@ def format_result(
     return "\n".join(lines)
 
 
+DND_DICE = [
+    ("▲ d4",   "d4"),
+    ("⬛ d6",  "d6"),
+    ("🔷 d8",  "d8"),
+    ("🔟 d10", "d10"),
+    ("🌐 d12", "d12"),
+    ("💠 d20", "d20"),
+    ("💯 d100","d100"),
+]
+
+
+def dice_keyboard() -> InlineKeyboardMarkup:
+    buttons = [
+        InlineKeyboardButton(label, callback_data=f"roll:1{die}")
+        for label, die in DND_DICE
+    ]
+    # Two rows: 4 + 3
+    return InlineKeyboardMarkup([buttons[:4], buttons[4:]])
+
+
 async def roll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     name = user.full_name or user.username or "Someone"
 
     if not context.args:
         await update.message.reply_text(
-            "Usage: /roll <NdN> or /roll <NdN+M>\nExamples: /roll 1d20  /roll 4d6  /roll 2d8+3"
+            f"🎲 *{name}*, pick a die:",
+            reply_markup=dice_keyboard(),
+            parse_mode="Markdown",
         )
         return
 
@@ -92,6 +114,28 @@ async def roll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     rolls = [random.randint(1, sides) for _ in range(count)]
     text = format_result(name, expr, count, sides, modifier, rolls)
     await update.message.reply_text(text, parse_mode="Markdown")
+
+
+async def dice_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    if not query.data.startswith("roll:"):
+        return
+
+    expr = query.data[len("roll:"):]
+    user = query.from_user
+    name = user.full_name or user.username or "Someone"
+
+    try:
+        count, sides, modifier = parse_roll(expr)
+    except ValueError as e:
+        await query.edit_message_text(f"⚠️ {e}")
+        return
+
+    rolls = [random.randint(1, sides) for _ in range(count)]
+    text = format_result(name, expr, count, sides, modifier, rolls)
+    await query.edit_message_text(text, parse_mode="Markdown")
 
 
 HELP_TEXT = (
@@ -130,6 +174,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("roll", roll))
+    app.add_handler(CallbackQueryHandler(dice_button, pattern=r"^roll:"))
 
     logger.info("Bot started. Polling...")
     app.run_polling()
