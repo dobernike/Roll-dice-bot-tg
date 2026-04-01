@@ -94,16 +94,31 @@ async def roll(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
+HELP_TEXT = (
+    "🎲 *Dice Bot — Help*\n\n"
+    "*Command:*\n"
+    "`/roll <NdN[+/-M]>`\n\n"
+    "*Examples:*\n"
+    "• `/roll 1d20` — roll a 20-sided die\n"
+    "• `/roll 4d6` — roll four 6-sided dice\n"
+    "• `/roll 2d8+3` — roll two d8s and add 3\n"
+    "• `/roll 1d100` — percentile roll\n\n"
+    "*Special rules:*\n"
+    "• 🌟 Natural 20 on a single d20 → *Critical Hit*\n"
+    "• 💀 Natural 1 on a single d20 → *Critical Fail*\n\n"
+    f"*Limits:* up to 100 dice, up to 10,000 sides."
+)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "🎲 *Dice Bot* is ready!\n\n"
-        "Commands:\n"
-        "• `/roll 1d20` — roll a 20-sided die\n"
-        "• `/roll 4d6` — roll four 6-sided dice\n"
-        "• `/roll 2d8+3` — roll two d8s and add 3\n\n"
-        "Critical hits and fails are highlighted on d20 rolls!",
+        "🎲 *Dice Bot* is ready!\n\n" + HELP_TEXT,
         parse_mode="Markdown",
     )
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(HELP_TEXT, parse_mode="Markdown")
 
 
 def main() -> None:
@@ -113,6 +128,7 @@ def main() -> None:
 
     app = ApplicationBuilder().token(token).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("roll", roll))
 
     logger.info("Bot started. Polling...")
